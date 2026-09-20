@@ -1,0 +1,25 @@
+# Tooling config.  Not a package: there is nothing to build or install, this
+# file only configures pytest and ruff.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Puts src/ on sys.path for the whole session.  This is the entire reason a
+# test module can say `import day03` with no package layout, no __init__.py,
+# and no sys.path juggling inside conftest.
+pythonpath = ["src"]
+addopts = "-ra"
+# `slow` is registered so `-m "not slow"` can skip multi-second tests.  Nothing
+# is deselected by default: the full suite is still the thing that says a day
+# is green.
+markers = ["slow: takes seconds, not milliseconds"]
+
+[tool.ruff]
+line-length = 110
+extend-exclude = ["Problem_Statements", "inputs"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint.per-file-ignores]
+# *_mtl.py files are Matt's own independent attempts, not maintained modules.
+"src/day*_mtl.py" = ["SIM102"]

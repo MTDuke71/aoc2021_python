@@ -1,0 +1,19 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*~
+*.swp
+.vscode/
+
+# Puzzle inputs (AoC asks that inputs not be redistributed)
+/inputs/*.txt
+
+# Raw problem-statement downloads (intermediate; converted to dayNN.md)
+/Problem_Statements/days/*.html
+
+# Python tooling
+.venv/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
