@@ -1,8 +1,6 @@
 """Day 1: Sonar Sweep.
 
-Not solved yet.  part1 and part2 raise NotImplementedError; that is what
-tests/conftest.py and bench.py key on to skip the day, so an unsolved day
-can never show up as an answer or a timing.
+Input is one integer sea-floor depth per line, in sweep order.
 """
 
 from pathlib import Path
@@ -10,21 +8,31 @@ from pathlib import Path
 INPUT = Path(__file__).resolve().parent.parent / "inputs" / "day01.txt"
 
 
-def parse_input(raw: str) -> list[str]:
-    return [line for line in raw.splitlines() if line.strip()]
+def parse_input(raw: str) -> list[int]:
+    return [int(line) for line in raw.splitlines() if line.strip()]
 
 
-def part1(parsed: list[str]) -> int:
-    raise NotImplementedError("day01 part1")
+def count_increases(depths: list[int], gap: int) -> int:
+    """How many readings are larger than the reading `gap` places earlier.
+
+    gap=1 is part 1 as stated.  gap=3 is part 2: adjacent three-wide windows
+    share their two middle readings, so comparing the window sums is the same
+    as comparing the one reading each window has that the other does not.
+    """
+    return sum(later > earlier for earlier, later in zip(depths, depths[gap:]))
 
 
-def part2(parsed: list[str]) -> int:
-    raise NotImplementedError("day01 part2")
+def part1(depths: list[int]) -> int:
+    return count_increases(depths, 1)
+
+
+def part2(depths: list[int]) -> int:
+    return count_increases(depths, 3)
 
 
 def solve(raw: str) -> tuple[int, int]:
-    parsed = parse_input(raw)
-    return part1(parsed), part2(parsed)
+    depths = parse_input(raw)
+    return part1(depths), part2(depths)
 
 
 def main() -> None:

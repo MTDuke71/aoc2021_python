@@ -7,10 +7,12 @@ by adventofcode.com stays blank, whatever the code currently prints.
 Day 0 is a tutorial dry run (AoC 2019 day 1), not an AoC 2021 puzzle. It is here
 to prove the pipeline end to end: module, tests, locked answers, bench.
 
+Status: ✅ both answers accepted · 🟡 code and guide written, answers not yet accepted · ⬜ not started.
+
 | Day | Puzzle | Status | Part 1 | Part 2 | Notes |
 | --- | --- | --- | --- | --- | --- |
 | 00 | [The Tyranny of the Rocket Equation](day00.md) | ✅ | 3481005 | 5218616 | Dry run; [guide](day00_function_guide.md). Part 1 sums `mass // 3 - 2`; part 2 iterates that on its own output until a step is no longer positive. |
-| 01 | [Sonar Sweep](day01.md) | ⬜ | | | |
+| 01 | [Sonar Sweep](day01.md) | ✅ | 1791 | 1822 | [guide](day01_function_guide.md). Both parts are `count_increases(depths, gap)`: gap 1, then gap 3, since adjacent three-wide windows share two readings and the sum comparison reduces to `d[i+3] > d[i]`. |
 | 02 | [Dive!](day02.md) | ⬜ | | | |
 | 03 | [Binary Diagnostic](day03.md) | ⬜ | | | |
 | 04 | [Giant Squid](day04.md) | ⬜ | | | |
