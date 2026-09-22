@@ -98,8 +98,16 @@ One pass, O(n) time. `depths[gap:]` copies the list, so O(n) extra space --
 2000 ints, irrelevant here. The general point: a window of width `w` costs
 the same as a window of width 1, because the window is never summed.
 
-Measured with `bench.py` (best of 5): parse 0.192 ms, part 1 0.089 ms,
-part 2 0.083 ms. Parsing 2000 ints is the most expensive step of the day.
+`bench.py 1`, best of 5 on the real input:
+
+| phase | ms |
+| --- | ---: |
+| parse | 0.175 |
+| part 1 | 0.087 |
+| part 2 | 0.083 |
+| total | 0.346 |
+
+Parsing 2000 ints is the most expensive step of the day.
 
 ## 6. If I were writing this in Rust
 
@@ -130,7 +138,7 @@ leaves the `\r` on, the same trap as Python's `split("\n")`.
 
 ## 7. Possible optimization
 
-None worth having; the day is 0.37 ms and parse-dominated. The memory-tidy
+None worth having; the day is 0.35 ms and parse-dominated. The memory-tidy
 variant is `itertools.islice(depths, gap, None)` in place of `depths[gap:]`
 to avoid the copy -- not adopted, since the slice reads better and 2000 ints
 is nothing.

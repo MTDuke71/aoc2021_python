@@ -76,8 +76,14 @@ Each step divides by 3, so a chain from mass `m` is about `log3(m)` steps; the
 longest on the real input is 9. Both parts are linear in the number of
 modules with a tiny constant.
 
-Measured with `bench.py` (best of 5): parse 0.018 ms, part 1 0.013 ms,
-part 2 0.113 ms.
+`bench.py 0`, best of 5 on the real input:
+
+| phase | ms |
+| --- | ---: |
+| parse | 0.009 |
+| part 1 | 0.007 |
+| part 2 | 0.064 |
+| total | 0.081 |
 
 ## 6. If I were writing this in Rust
 
@@ -100,4 +106,4 @@ masses and positive steps -- so the port needs no adjustment for it.
 
 ## 7. Possible optimization
 
-None worth having. The whole day is 0.14 ms.
+None worth having. The whole day is 0.08 ms.
