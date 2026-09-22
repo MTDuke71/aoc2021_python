@@ -1,8 +1,6 @@
 """Day 2: Dive!.
 
-Not solved yet.  part1 and part2 raise NotImplementedError; that is what
-tests/conftest.py and bench.py key on to skip the day, so an unsolved day
-can never show up as an answer or a timing.
+Input is one command per line: `forward X`, `down X` or `up X`.
 """
 
 from pathlib import Path
@@ -10,16 +8,56 @@ from pathlib import Path
 INPUT = Path(__file__).resolve().parent.parent / "inputs" / "day02.txt"
 
 
-def parse_input(raw: str) -> list[str]:
-    return [line for line in raw.splitlines() if line.strip()]
+def parse_input(raw: str) -> list[tuple[int, int]]:
+    """Each command as a (forward, dive) pair of signed deltas.
+
+    `forward 5` -> (5, 0), `down 5` -> (0, 5), `up 3` -> (0, -3).  Down is
+    the positive direction.  What `dive` is a delta *of* is up to the caller:
+    part 1 reads it as depth, part 2 as aim.
+    """
+    moves = []
+    for line in raw.splitlines():
+        if not line.strip():
+            continue
+        command, amount = line.split()
+        x = int(amount)
+        if command == "forward":
+            moves.append((x, 0))
+        elif command == "down":
+            moves.append((0, x))
+        elif command == "up":
+            moves.append((0, -x))
+        else:
+            raise ValueError(f"unknown command: {line!r}")
+    return moves
 
 
-def part1(parsed: list[str]) -> int:
-    raise NotImplementedError("day02 part1")
+def part1(moves: list[tuple[int, int]]) -> int:
+    horizontal = depth = 0
+    for forward, dive in moves:
+        horizontal += forward
+        depth += dive
+    return horizontal * depth
 
 
-def part2(parsed: list[str]) -> int:
-    raise NotImplementedError("day02 part2")
+def steer(moves: list[tuple[int, int]]) -> tuple[int, int, int]:
+    """Part 2's rules: (horizontal, depth, aim) after the whole course.
+
+    Every pair has one zero in it, so both updates can run unconditionally:
+    a down/up has forward == 0 and moves nothing, a forward has dive == 0
+    and leaves aim alone.
+    """
+    horizontal = depth = aim = 0
+    for forward, dive in moves:
+        aim += dive
+        horizontal += forward
+        depth += aim * forward
+    return horizontal, depth, aim
+
+
+def part2(moves: list[tuple[int, int]]) -> int:
+    horizontal, depth, _ = steer(moves)
+    return horizontal * depth
 
 
 def solve(raw: str) -> tuple[int, int]:

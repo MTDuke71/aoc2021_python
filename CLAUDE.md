@@ -96,7 +96,10 @@ fresh clone stays green.
 2. `tests/test_dayNN.py`.
 3. `Problem_Statements/days/dayNN_function_guide.md`.
 4. Row in `Problem_Statements/days/summary_2021.md`.
-5. Bench timings when interesting.
+5. Bench timings: the four `bench.py` numbers (parse, part 1, part 2,
+   total; best of 5) go in the summary row's timing columns and as a phase
+   table in the guide's Complexity section, every day, not just when
+   interesting. A day is not finished until they are recorded.
 
 Part 2 of a statement only exists once part 1 is accepted; the README has the
 two commands that refresh `dayNN.md`.
