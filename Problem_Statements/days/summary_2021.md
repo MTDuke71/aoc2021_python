@@ -19,7 +19,7 @@ Status: ✅ both answers accepted · 🟡 in progress: code written, not every a
 | 00 | [The Tyranny of the Rocket Equation](day00.md) | ✅ | 3481005 | 5218616 | 0.009 | 0.007 | 0.064 | 0.081 | Dry run; [guide](day00_function_guide.md). Part 1 sums `mass // 3 - 2`; part 2 iterates that on its own output until a step is no longer positive. |
 | 01 | [Sonar Sweep](day01.md) | ✅ | 1791 | 1822 | 0.175 | 0.087 | 0.083 | 0.346 | [guide](day01_function_guide.md). Both parts are `count_increases(depths, gap)`: gap 1, then gap 3, since adjacent three-wide windows share two readings and the sum comparison reduces to `d[i+3] > d[i]`. |
 | 02 | [Dive!](day02.md) | ✅ | 2070300 | 2078985210 | 0.186 | 0.036 | 0.056 | 0.278 | [guide](day02_function_guide.md). Commands parse to signed `(forward, dive)` deltas. Both parts are one loop over them; part 1 accumulates `depth += dive`, part 2 `aim += dive` then `depth += aim * forward`. Part 2's product fits `i32` with only ~3% headroom. |
-| 03 | [Binary Diagnostic](day03.md) | ⬜ |  |  |  |  |  |  |  |
+| 03 | [Binary Diagnostic](day03.md) | ✅ | 2648450 | 2845944 | 0.337 | 0.527 | 0.323 | 1.187 | [guide](day03_function_guide.md). Parse keeps the bit width alongside the ints. Part 1: gamma sets each bit on a strict majority of 1s, epsilon is gamma XOR the all-ones mask (ties raise). Part 2: filter survivors MSB-first by most/least common bit; the two tie rules are mirror images, so the ratings split at the first bit. Part 2 is cheaper than part 1 (~8k vs 12k value visits). |
 | 04 | [Giant Squid](day04.md) | ⬜ |  |  |  |  |  |  |  |
 | 05 | [Hydrothermal Venture](day05.md) | ⬜ |  |  |  |  |  |  |  |
 | 06 | [Lanternfish](day06.md) | ⬜ |  |  |  |  |  |  |  |
