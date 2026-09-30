@@ -89,6 +89,57 @@ def test_lone_fish_timeline():
     assert day06.population([0, 0, 0, 1, 0, 0, 0, 0, 0], 4) == 2
 
 
+def transition_matrix():
+    """One day as a 9x9 matrix acting on the column vector of counts:
+    new[t] = old[t + 1] for t < 8, new[6] also gains old[0], new[8] = old[0]."""
+    m = [[0] * 9 for _ in range(9)]
+    for t in range(8):
+        m[t][t + 1] = 1
+    m[6][0] += 1
+    m[8][0] = 1
+    return m
+
+
+def matmul(a, b):
+    return [[sum(a[i][k] * b[k][j] for k in range(9)) for j in range(9)] for i in range(9)]
+
+
+def matrix_power(m, n):
+    """m**n by repeated squaring: O(log n) multiplies."""
+    result = [[int(i == j) for j in range(9)] for i in range(9)]
+    while n:
+        if n & 1:
+            result = matmul(result, m)
+        m = matmul(m, m)
+        n >>= 1
+    return result
+
+
+def population_by_matrix(counts, days):
+    p = matrix_power(transition_matrix(), days)
+    return sum(p[i][j] * counts[j] for i in range(9) for j in range(9))
+
+
+def test_matrix_step_is_the_same_step():
+    """The matrix is a second statement of the rule: one multiply by it must
+    equal `step` on every unit histogram and on a mixed one."""
+    m = transition_matrix()
+    for counts in [*([int(i == j) for j in range(9)] for i in range(9)), [3, 1, 4, 1, 5, 9, 2, 6, 5]]:
+        assert [sum(m[i][j] * counts[j] for j in range(9)) for i in range(9)] == day06.step(counts)
+
+
+@pytest.mark.parametrize("days", [0, 1, 2, 7, 18, 80, 256, 1000])
+def test_matrix_power_matches_the_loop(days):
+    """Raising the day matrix to the n-th power by squaring gives the same
+    population as n applications of `step`, on the example and a mixed start."""
+    for counts in (day06.parse_input(EXAMPLE), [3, 1, 4, 1, 5, 9, 2, 6, 5]):
+        assert population_by_matrix(counts, days) == day06.population(counts, days)
+
+
+def test_matrix_power_reaches_the_part_two_example():
+    assert population_by_matrix(day06.parse_input(EXAMPLE), 256) == 26984457539
+
+
 def test_negative_days_is_an_error():
     with pytest.raises(ValueError, match="non-negative"):
         day06.population([0] * 9, -1)

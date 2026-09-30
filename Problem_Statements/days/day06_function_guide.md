@@ -187,6 +187,72 @@ Rust step written in Python. It gives the same part 2 answer and takes
 as the statement does, and the whole day is already under a fifth of a
 millisecond.
 
-The other route is to treat one day as a 9x9 matrix and raise it to the
-256th power by squaring, which turns O(days) into O(log days). Nothing
-here needs it, and I did not implement or measure it.
+**Why not keep the fish as a list.** The statement's own listings invite
+it: one list entry per fish, a `0` becomes `6`, append an `8`. It is right,
+and it is exactly what `naive_fish` in the tests does. Part 1 is fine with
+it. Part 2 is not, and the reason is the size of the answer, not the speed
+of any one step.
+
+Measured on the real input:
+
+| | part 1 (80 days) | part 2 (256 days) |
+| --- | ---: | ---: |
+| fish | 373,378 | 1,682,576,647,495 |
+| list of fish, 8 bytes per entry | 3.0 MB | 13.5 TB |
+| one byte per fish (`bytearray`) | 0.4 MB | 1.7 TB |
+| one nibble per fish (packed) | 0.2 MB | 0.84 TB |
+| 9-slot histogram | 9 counters | 9 counters |
+
+- **Part 1 works.** A list-rebuilding version (`fish.count(0)`, a
+  comprehension, `+ [8] * born`) gets 373378 in 144 ms with a peak of
+  9 MB, and agrees with the histogram. That is about 5,000x the
+  histogram's 0.028 ms, but nobody notices at that size, which is why the
+  trap springs only on part 2.
+- **Part 2 cannot fit.** The list needs 8 bytes per fish (a pointer; the
+  small ints 0..8 are cached, so the values themselves cost nothing extra),
+  and there are 1.68e12 fish. This machine has 31 GB. The list outgrows
+  that at day 187 of 256, at about 4e9 fish, long before the end.
+- **Cheaper encodings do not rescue it.** One byte per fish is still
+  1.7 TB, and even packing two fish per byte is 0.84 TB. Shrinking the
+  constant cannot beat a count that grows without limit.
+- **The growth is what matters.** The population multiplies by about 1.091
+  per day late in the run, doubling roughly every 8 days. Part 2 asks for
+  176 more days than part 1, which is 22 doublings. Any method whose cost
+  is proportional to the number of fish inherits that, in memory and in
+  time.
+
+The way out is the observation the solution rests on: fish with the same
+timer are interchangeable, so store how many at each timer, not each fish.
+Cost then depends on the number of distinct timers (9), not the number of
+fish. The pattern is common in AoC: when the statement simulates individual
+things and then asks for a horizon 3x longer, look for a representation
+that counts things instead of listing them.
+
+**Matrix power.** One day is a linear map, so it is a 9x9 matrix `M` acting
+on the histogram: row 0 picks `old[1]`, row 6 is `old[7] + old[0]`, row 8
+is `old[0]`, and so on. Then `n` days is `M**n @ counts`, and `M**n` takes
+about log2(n) squarings (plus one multiply per 1 bit) instead of n steps:
+9 multiplies for 80 days and 10 for 256. Same trick as fast modular
+exponentiation, and as jumping an LFSR ahead n clocks.
+
+It is implemented in `tests/test_day06.py` only, as a cross-check: a
+second statement of the rule that must agree with `step` on unit
+histograms (`test_matrix_step_is_the_same_step`) and with `population` at
+0, 1, 2, 7, 18, 80, 256 and 1000 days
+(`test_matrix_power_matches_the_loop`). It is not in `src/`, because it
+loses. Measured on the real input (best of several runs, plain Python
+lists), exact answers:
+
+| days | `step` loop (ms) | matrix power (ms) |
+| ---: | ---: | ---: |
+| 256 | 0.041 | 0.608 |
+| 1,000 | 0.181 | 0.994 |
+| 10,000 | 1.85 | 2.51 |
+| 100,000 | 28.6 | 61.9 |
+
+The matrix version never catches up in this range, and the gap widens at
+100,000 days. A 9x9 multiply is 729 multiply-adds against about 9 for a
+step, and because the answer is exact, the entries are huge integers whose
+multiplication cost grows faster than the loop's additions. I expect it
+would win where the numbers stay small, such as an answer taken modulo
+something, but I did not measure that.
