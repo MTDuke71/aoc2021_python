@@ -11,6 +11,9 @@ Thumbs.db
 # Raw problem-statement downloads (intermediate; converted to dayNN.md)
 /Problem_Statements/days/*.html
 
+# Renderings of the puzzle input (same redistribution concern)
+/Problem_Statements/days/*.png
+
 # Python tooling
 .venv/
 .pytest_cache/
