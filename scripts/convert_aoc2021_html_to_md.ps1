@@ -58,14 +58,15 @@ function Convert-AocHtmlToMarkdown {
     foreach ($match in $articleMatches) {
         $text = $match.Groups[1].Value
 
-        # Preserve code blocks first so later inline replacements do not damage them.
+        # Fence code blocks first, before <code> becomes an inline backtick.
+        # Entities stay encoded until the final decode: decoding here would turn
+        # &lt;...&gt; into text the tag strip below deletes (day 10's brackets).
         $text = [regex]::Replace(
             $text,
             '<pre><code>(.*?)</code></pre>',
             {
                 param($m)
-                $inner = [System.Net.WebUtility]::HtmlDecode($m.Groups[1].Value)
-                $inner = $inner -replace "`r?`n", "`n"
+                $inner = $m.Groups[1].Value -replace "`r?`n", "`n"
                 "`n" + '```text' + "`n" + $inner + "`n" + '```' + "`n"
             },
             [System.Text.RegularExpressions.RegexOptions]::Singleline
