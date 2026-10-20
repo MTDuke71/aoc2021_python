@@ -13,6 +13,7 @@ Thumbs.db
 
 # Renderings of the puzzle input (same redistribution concern)
 /Problem_Statements/days/*.png
+/Problem_Statements/days/*.jpg
 
 # Python tooling
 .venv/
