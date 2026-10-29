@@ -280,6 +280,48 @@ def test_right_down_dp_fails_on_real_input(real_input):
     assert right_down_dp(full) > day15.lowest_risk(full)
 
 
+@pytest.mark.parametrize("which", ["example", "snake", "real1", "real2"])
+def test_astar_matches_dijkstra(which, real_input):
+    raw = {"example": EXAMPLE, "snake": SNAKE}.get(which) or real_input(15)
+    grid = day15.parse_input(raw)
+    if which == "real2":
+        grid = day15.tile(grid, 5)
+    assert day15.lowest_risk_astar(grid) == day15.lowest_risk(grid)
+
+
+def cells_popped(fn, grid, monkeypatch):
+    popped = set()
+    real_pop = day15.heapq.heappop
+
+    def pop(heap):
+        item = real_pop(heap)
+        popped.add(item[-2:])
+        return item
+
+    monkeypatch.setattr(day15.heapq, "heappop", pop)
+    fn(grid)
+    monkeypatch.undo()
+    return len(popped)
+
+
+def test_astar_prunes_the_example(monkeypatch):
+    """On the example A* never pops 14 of the 100 cells; Dijkstra skips only 3."""
+    grid = day15.parse_input(EXAMPLE)
+    assert cells_popped(day15.lowest_risk, grid, monkeypatch) == 97
+    assert cells_popped(day15.lowest_risk_astar, grid, monkeypatch) == 86
+
+
+@pytest.mark.parametrize("which", ["real1", "real2"])
+def test_astar_prunes_nothing_on_real_input(which, real_input, monkeypatch):
+    """The estimate assumes 1 risk per step; the real best paths average 2.57 (part 1)
+    and 2.88 (part 2), so no cell's estimate rises above the answer and A* pops them all."""
+    grid = day15.parse_input(real_input(15))
+    if which == "real2":
+        grid = day15.tile(grid, 5)
+    cells = len(grid) * len(grid[0])
+    assert cells_popped(day15.lowest_risk_astar, grid, monkeypatch) == cells
+
+
 def test_crlf_input():
     """Windows-downloaded inputs carry \r; parse_input must not keep it."""
     crlf = EXAMPLE.replace("\n", "\r\n")

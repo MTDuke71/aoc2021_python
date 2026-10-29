@@ -16,6 +16,8 @@ in general (the tests carry a grid where it gets the wrong answer).
 parse_input turns the text into a tuple of rows of ints and checks the grid is
 rectangular and all digits 1-9.  lowest_risk() runs Dijkstra from corner to corner.
 tile() builds part 2's full map; the same lowest_risk() then runs on it.
+lowest_risk_astar() is an A* version kept for comparison: on the real input it
+skips no cells and runs slower, so the parts do not use it.
 """
 
 import heapq
@@ -71,6 +73,41 @@ def lowest_risk(grid: Grid) -> int:
                 if nxt < best.get((nr, nc), nxt + 1):
                     best[nr, nc] = nxt
                     heapq.heappush(heap, (nxt, nr, nc))
+    raise AssertionError("unreachable: a rectangular grid is connected")
+
+
+def lowest_risk_astar(grid: Grid) -> int:
+    """`lowest_risk` as A*, kept for comparison; part1 and part2 use `lowest_risk`.
+
+    The heap is ordered by risk-so-far plus an estimate of the risk still to
+    come: the Manhattan distance to the target times the grid's smallest risk.
+    Every remaining step enters a cell costing at least that much, so the
+    estimate never overshoots (admissible).  It also drops by at most the
+    smallest risk per step while the step costs at least that (consistent), so
+    as in Dijkstra the first pop of the target is final.  With the estimate at
+    zero this is exactly `lowest_risk`.
+    """
+    height, width = len(grid), len(grid[0])
+    target = (height - 1, width - 1)
+    floor = min(min(row) for row in grid)
+
+    def estimate(r: int, c: int) -> int:
+        return floor * ((height - 1 - r) + (width - 1 - c))
+
+    best = {(0, 0): 0}
+    heap = [(estimate(0, 0), 0, 0, 0)]
+    while heap:
+        _, risk, r, c = heapq.heappop(heap)
+        if (r, c) == target:
+            return risk
+        if risk > best[r, c]:
+            continue
+        for nr, nc in ((r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1)):
+            if 0 <= nr < height and 0 <= nc < width:
+                nxt = risk + grid[nr][nc]
+                if nxt < best.get((nr, nc), nxt + 1):
+                    best[nr, nc] = nxt
+                    heapq.heappush(heap, (nxt + estimate(nr, nc), nxt, nr, nc))
     raise AssertionError("unreachable: a rectangular grid is connected")
 
 

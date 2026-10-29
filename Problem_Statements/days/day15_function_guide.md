@@ -248,9 +248,50 @@ simplification *for this puzzle's graph shape only*. It was left out
 because the general version is the one worth keeping in your head, and the
 saving is one comparison per pop.
 
-**A\* toward the corner.** Manhattan distance to the target × 1 (the
-cheapest possible risk) is an admissible heuristic. It would skip some of
-the cells far from the diagonal. Here the target is the farthest cell from
-the start, and both runs pop every single cell before reaching it (10,000
-of 10,000; 250,000 of 250,000), so there is room to prune. How much A\*
-would actually save was not measured.
+**A\* toward the corner (implemented and measured; prunes nothing here).**
+`lowest_risk_astar` in the source is the A\* version, kept for comparison
+only; `part1` and `part2` don't use it. It orders the heap by
+f = risk-so-far + estimate, where the estimate is the Manhattan distance to
+the target × the grid's smallest risk (1 on every grid here).
+
+- **Admissible:** every remaining step enters a cell that costs at least the
+  smallest risk, so the estimate never overshoots.
+- **Consistent:** one step lowers the estimate by at most the smallest risk
+  and costs at least that much. So, as in Dijkstra, the first pop of the
+  target is final.
+
+Dijkstra pops every cell before it reaches the target, which looks like room
+to prune. Measured (popped cells via a wrapped `heappop`; time is best of 5):
+
+| grid              | cells   | Dijkstra pops | A\* pops | A\* never pops | Dijkstra ms | A\* ms |
+| ----------------- | ------: | ------------: | -------: | -------------: | ----------: | -----: |
+| example           |     100 |            97 |       86 |             14 |       0.079 |  0.083 |
+| example, tiled ×5 |   2,500 |         2,500 |    2,500 |              0 |       2.307 |  2.692 |
+| real, part 1      |  10,000 |        10,000 |   10,000 |              0 |      10.444 | 11.993 |
+| real, part 2      | 250,000 |       250,000 |  250,000 |          **0** |     347.070 | 418.528 |
+
+On the real input A\* ignores **no** cells, and it is 15–20% slower because
+every heap entry carries the estimate as well.
+
+Why: A\* must pop every cell whose f is below the answer. It can only skip a
+cell whose true risk-to-reach plus estimate is *above* the answer. The
+estimate assumes 1 risk per remaining step, but the real best paths average
+far more:
+
+| grid         | answer | steps | risk per step | cells with f > answer |
+| ------------ | -----: | ----: | ------------: | --------------------: |
+| example      |     40 |    18 |          2.22 |                    14 |
+| real, part 1 |    508 |   198 |          2.57 |                     0 |
+| real, part 2 |  2,872 |   998 |          2.88 |                     0 |
+
+(Computed from a full Dijkstra distance map.) The example's 14 cells with
+f > 40 are exactly the 14 it never pops. On the real maps the highest f of
+any cell equals the answer, so there is nothing to skip. The estimate is
+too optimistic to rule anything out: a cell far off the diagonal is "cheap"
+by the 1-per-step estimate even when its real route to the corner is not.
+
+A sharper estimate would need real information about the grid. The perfect
+one is the exact risk from every cell to the target, but that is a full
+reverse Dijkstra, which is the whole job again. Pinned by
+`test_astar_matches_dijkstra`, `test_astar_prunes_the_example` and
+`test_astar_prunes_nothing_on_real_input`.
