@@ -1,0 +1,455 @@
+<title>Trench Map Stepper</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: sonar-chart canvas on the left, a lab-bench readout column on the right; stacks on phones. */
+:root {
+  --bg: #e9eef1;
+  --surface: #f7f9fa;
+  --ink: #15242c;
+  --muted: #5a6b74;
+  --rule: #c9d4da;
+  --dark-px: #cfd9de;      /* a dark pixel inside the finite grid */
+  --dark-out: #dde5e9;     /* a dark pixel in the infinite outside */
+  --lit: #d9822b;          /* a light pixel */
+  --lit-out: #eab27a;      /* a light pixel in the infinite outside */
+  --edge: #15242c;
+  --probe: #1f6f8b;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e171c; --surface: #15222a; --ink: #e3ebef; --muted: #8fa2ad; --rule: #2a3a44;
+    --dark-px: #1c2c35; --dark-out: #142028; --lit: #f0a04b; --lit-out: #9a6a3a;
+    --edge: #e3ebef; --probe: #5fc1e0; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e171c; --surface: #15222a; --ink: #e3ebef; --muted: #8fa2ad; --rule: #2a3a44;
+  --dark-px: #1c2c35; --dark-out: #142028; --lit: #f0a04b; --lit-out: #9a6a3a;
+  --edge: #e3ebef; --probe: #5fc1e0; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+}
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 18px; }
+header { display: grid; gap: 4px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(26px, 4vw, 38px); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.lede { color: var(--muted); margin: 0; max-width: 72ch; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+.main { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 880px) { .main { grid-template-columns: minmax(0, 1fr); } }
+
+.chart { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 12px; display: grid; gap: 10px; min-width: 0; }
+.chart canvas { width: 100%; aspect-ratio: 1; max-width: 100%; display: block; image-rendering: pixelated; cursor: crosshair; touch-action: manipulation; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; border: 1px solid var(--rule); }
+
+.side { display: grid; gap: 14px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+.panel h2 { font-family: var(--font-display); font-weight: 600; font-size: 17px; margin: 0; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+button {
+  font: 500 14px var(--font-body); color: var(--ink); background: var(--bg); border: 1px solid var(--rule);
+  border-radius: 4px; padding: 7px 12px; cursor: pointer; min-height: 36px;
+}
+button:hover { border-color: var(--muted); }
+button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--probe); outline-offset: 2px; }
+button.primary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+button[aria-pressed="true"] { background: var(--probe); color: var(--surface); border-color: var(--probe); }
+button:disabled { opacity: 0.45; cursor: default; }
+input[type="range"] { width: 100%; accent-color: var(--probe); }
+
+.readout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; }
+.readout div { display: grid; gap: 0; }
+.readout dt { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+.readout dd { margin: 0; font-family: var(--font-mono); font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.chip { display: inline-block; font-family: var(--font-mono); font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--rule); }
+.chip.lit { background: var(--lit); color: #1a1006; border-color: var(--lit); }
+.chip.dark { background: var(--dark-px); color: var(--ink); }
+.answer { font-size: 13px; color: var(--muted); min-height: 1.5em; }
+.answer strong { color: var(--ink); }
+
+.window { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; }
+.win3 { display: grid; grid-template-columns: repeat(3, 34px); grid-template-rows: repeat(3, 34px); gap: 3px; }
+.win3 div { display: grid; place-items: center; font: 600 13px var(--font-mono); border-radius: 3px; background: var(--dark-px); color: var(--ink); }
+.win3 div.on { background: var(--lit); color: #1a1006; }
+.win3 div.centre { outline: 2px solid var(--probe); outline-offset: 1px; }
+.decode { font-family: var(--font-mono); font-size: 13.5px; display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.decode b { font-weight: 600; }
+.decode .big { font-size: 18px; }
+.note { font-size: 13px; color: var(--muted); margin: 0; }
+
+.table-wrap { overflow-x: auto; }
+#tableCanvas { width: 100%; max-width: 100%; display: block; image-rendering: pixelated; }
+
+.source { display: grid; gap: 8px; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; width: fit-content; }
+.seg button { border: 0; border-radius: 0; background: transparent; }
+textarea {
+  width: 100%; min-height: 110px; font: 12px/1.35 var(--font-mono); color: var(--ink); background: var(--bg);
+  border: 1px solid var(--rule); border-radius: 4px; padding: 8px; resize: vertical;
+}
+.status { font-size: 13px; color: var(--muted); }
+.status.err { color: #b3261e; }
+kbd { font: 500 11.5px var(--font-mono); border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 3px; padding: 0 5px; background: var(--bg); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Advent of Code 2021 · Day 20</span>
+    <h1>Trench Map Stepper</h1>
+    <p class="lede">Each step replaces every pixel with <code>table[n]</code>, where <code>n</code> is the 9-bit number read from its 3×3 window. The dashed box is the finite grid. Everything outside it is one value, the infinite background. Watch the outside when the table's entry 0 is <code>#</code>: it lights up on odd steps.</p>
+  </header>
+
+  <div class="main">
+    <section class="chart" aria-label="Image">
+      <canvas id="view" width="600" height="600" aria-label="Enhanced image; hover or tap a pixel to inspect its window"></canvas>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--lit)"></i>light, in grid</span>
+        <span><i class="sw" style="background:var(--dark-px)"></i>dark, in grid</span>
+        <span><i class="sw" style="background:var(--lit-out)"></i>light, outside</span>
+        <span><i class="sw" style="background:var(--dark-out)"></i>dark, outside</span>
+        <span><i class="sw" style="border:2px solid var(--probe);background:transparent"></i>window being inspected</span>
+      </div>
+    </section>
+
+    <div class="side">
+      <section class="panel" aria-label="Step controls">
+        <div class="controls">
+          <button id="reset" title="Back to step 0">Reset</button>
+          <button id="back" title="Previous step (←)">◀ Back</button>
+          <button id="step" class="primary" title="Next step (→)">Step ▶</button>
+          <button id="play" aria-pressed="false" title="Play / pause (space)">Play</button>
+          <button id="to2">Step 2</button>
+          <button id="to50">Step 50</button>
+        </div>
+        <input id="scrub" type="range" min="0" max="50" value="0" aria-label="Step">
+        <dl class="readout">
+          <div><dt>Step</dt><dd id="rStep">0</dd></div>
+          <div><dt>Lit pixels</dt><dd id="rLit">0</dd></div>
+          <div><dt>Grid</dt><dd id="rGrid">5×5</dd></div>
+          <div><dt>Outside</dt><dd><span id="rBg" class="chip dark">dark</span></dd></div>
+        </dl>
+        <div class="answer" id="answer"></div>
+        <p class="note"><kbd>←</kbd> <kbd>→</kbd> step · <kbd>space</kbd> play · hover a pixel to inspect it, click to pin it</p>
+      </section>
+
+      <section class="panel" aria-label="Window inspector">
+        <h2 id="inspTitle">Window at (2, 2)</h2>
+        <div class="window">
+          <div class="win3" id="win3"></div>
+          <div class="decode" id="decode"></div>
+        </div>
+        <p class="note" id="inspNote"></p>
+      </section>
+
+      <section class="panel" aria-label="Enhancement table">
+        <h2>The 512-entry table</h2>
+        <div class="table-wrap"><canvas id="tableCanvas" width="512" height="256"></canvas></div>
+        <p class="note">Row-major, 32 entries per row: entry <code>n</code> is at row <code>n ÷ 32</code>, column <code>n mod 32</code>. Entry 0 is top-left and entry 511 is bottom-right. Those two decide the background: <span id="bgRule"></span></p>
+      </section>
+
+      <section class="panel source" aria-label="Input">
+        <h2>Input</h2>
+        <div class="seg" role="group" aria-label="Input source">
+          <button id="srcEx" aria-pressed="true">Statement example</button>
+          <button id="srcMine" aria-pressed="false">My input</button>
+        </div>
+        <div id="mineBox" hidden>
+          <textarea id="paste" spellcheck="false" placeholder="Paste your puzzle input here: the 512-character table, a blank line, then the image."></textarea>
+          <div class="controls">
+            <button id="load" class="primary">Load pasted input</button>
+            <label><button id="pick" type="button">Open file…</button></label>
+            <input id="file" type="file" accept=".txt,text/plain" hidden>
+          </div>
+        </div>
+        <div class="status" id="status">Showing the statement's example. Its answers are 35 at step 2 and 3351 at step 50.</div>
+        <p class="note">Your input is processed in this page only and never leaves your browser.</p>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const MAX = 50;
+  const EXAMPLE = `..#.#..#####.#.#.#.###.##.....###.##.#..###.####..#####..#....#..#..##..##
+#..######.###...####..#..#####..##..#.#####...##.#.#..#.##..#.#......#.###
+.######.###.####...#.##.##..#..#..#####.....#.#....###..#.##......#.....#.
+.#..#..##..#...##.######.####.####.#.#...#.......#..#.#.#...####.##.#.....
+.#..#...##.#.##..#...##.#.##..###.#......#.#.......#.#.#.####.###.##...#..
+...####.#..#..#.##.#....##..#.####....##...##..#...#......#.#.......#.....
+..##..####..#...#.#.#...##..#.#..###..#####........#..####......#..#
+
+#..#.
+#....
+##..#
+..#..
+..###`;
+
+  // ---- model (mirrors src/day20.py) -------------------------------------
+  function parse(raw) {
+    const lines = raw.trim().split(/\r?\n/).map(l => l.trim());
+    const split = lines.indexOf("");
+    if (split < 0) throw new Error("Expected a blank line between the table and the image.");
+    const algStr = lines.slice(0, split).join("");
+    if (algStr.length !== 512) throw new Error(`The table has ${algStr.length} characters; it needs exactly 512.`);
+    const toBits = (s, what) => Array.from(s, ch => {
+      if (ch === "#") return 1; if (ch === ".") return 0;
+      throw new Error(`Unexpected character '${ch}' in the ${what}. Use only # and .`);
+    });
+    const alg = Uint8Array.from(toBits(algStr, "table"));
+    if (alg[0] && alg[511]) throw new Error("Entries 0 and 511 are both #: the outside would light up and never go dark, so no count is finite.");
+    const rowStrs = lines.slice(split + 1).filter(Boolean);
+    if (!rowStrs.length) throw new Error("No image found after the blank line.");
+    const w = rowStrs[0].length;
+    if (rowStrs.some(r => r.length !== w)) throw new Error("Image rows have different lengths.");
+    const h = rowStrs.length;
+    const px = new Uint8Array(h * w);
+    rowStrs.forEach((r, i) => toBits(r, "image").forEach((b, j) => { px[i * w + j] = b; }));
+    return { alg, image: { h, w, px, bg: 0 } };
+  }
+
+  function get(img, r, c) {
+    return (r >= 0 && r < img.h && c >= 0 && c < img.w) ? img.px[r * img.w + c] : img.bg;
+  }
+  // Window index centred on (r, c) in img's own coordinates.
+  function windowIndex(img, r, c) {
+    let n = 0;
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) n = (n << 1) | get(img, r + dr, c + dc);
+    return n;
+  }
+  function enhance(img, alg) {
+    const h = img.h + 2, w = img.w + 2, px = new Uint8Array(h * w);
+    for (let i = 0; i < h; i++) for (let j = 0; j < w; j++) px[i * w + j] = alg[windowIndex(img, i - 1, j - 1)];
+    return { h, w, px, bg: alg[img.bg ? 511 : 0] };
+  }
+  const litCount = img => img.px.reduce((a, b) => a + b, 0);
+
+  // ---- state -----------------------------------------------------------
+  let puzzle, frames, step = 0, timer = null, pinned = null, hover = null, isExample = true;
+  const $ = id => document.getElementById(id);
+  const view = $("view"), vctx = view.getContext("2d");
+  const off = document.createElement("canvas"), octx = off.getContext("2d");
+  const tcan = $("tableCanvas"), tctx = tcan.getContext("2d");
+
+  function load(raw, example) {
+    puzzle = parse(raw);
+    frames = [puzzle.image];
+    for (let k = 1; k <= MAX; k++) frames.push(enhance(frames[k - 1], puzzle.alg));
+    isExample = example;
+    const { h, w } = puzzle.image;
+    pinned = { r: Math.floor(h / 2), c: Math.floor(w / 2) };
+    hover = null;
+    setStep(0);
+  }
+
+  // Original-image coordinates (r, c) -> pixel value at step k.
+  const valueAt = (k, r, c) => get(frames[k], r + k, c + k);
+  const inGrid = (k, r, c) => r + k >= 0 && r + k < frames[k].h && c + k >= 0 && c + k < frames[k].w;
+
+  // The view always covers the step-50 grid plus one ring of outside.
+  const M = MAX + 1;
+  const viewDims = () => ({ vh: puzzle.image.h + 2 * M, vw: puzzle.image.w + 2 * M });
+
+  function colors() {
+    const cs = getComputedStyle(document.documentElement);
+    const hex = n => {
+      const v = cs.getPropertyValue(n).trim();
+      const m = v.match(/^#([0-9a-f]{6})$/i);
+      const x = m ? parseInt(m[1], 16) : 0;
+      return [x >> 16, (x >> 8) & 255, x & 255];
+    };
+    return { lit: hex("--lit"), dark: hex("--dark-px"), litOut: hex("--lit-out"), darkOut: hex("--dark-out"),
+             edge: cs.getPropertyValue("--edge").trim(), probe: cs.getPropertyValue("--probe").trim() };
+  }
+
+  function draw() {
+    const { vh, vw } = viewDims();
+    const col = colors();
+    off.width = vw; off.height = vh;
+    const data = octx.createImageData(vw, vh);
+    for (let vr = 0; vr < vh; vr++) for (let vc = 0; vc < vw; vc++) {
+      const r = vr - M, c = vc - M, inside = inGrid(step, r, c), v = valueAt(step, r, c);
+      const rgb = inside ? (v ? col.lit : col.dark) : (v ? col.litOut : col.darkOut);
+      const o = (vr * vw + vc) * 4;
+      data.data[o] = rgb[0]; data.data[o + 1] = rgb[1]; data.data[o + 2] = rgb[2]; data.data[o + 3] = 255;
+    }
+    octx.putImageData(data, 0, 0);
+
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = view.clientWidth || 600;
+    const side = Math.max(vh, vw);
+    view.width = Math.round(cssW * dpr); view.height = Math.round(cssW * dpr);
+    const cell = view.width / side;
+    vctx.imageSmoothingEnabled = false;
+    vctx.clearRect(0, 0, view.width, view.height);
+    vctx.drawImage(off, 0, 0, vw * cell, vh * cell);
+
+    // Finite-grid boundary.
+    const f = frames[step];
+    vctx.save();
+    vctx.strokeStyle = col.edge; vctx.lineWidth = Math.max(1, 1.5 * dpr);
+    vctx.setLineDash([5 * dpr, 4 * dpr]);
+    vctx.strokeRect((M - step) * cell, (M - step) * cell, f.w * cell, f.h * cell);
+    vctx.restore();
+
+    // Probe window.
+    const p = hover || pinned;
+    if (p) {
+      vctx.save();
+      vctx.strokeStyle = col.probe; vctx.lineWidth = Math.max(2, 2 * dpr);
+      vctx.strokeRect((p.c - 1 + M) * cell, (p.r - 1 + M) * cell, 3 * cell, 3 * cell);
+      vctx.restore();
+    }
+    view._cell = cell / dpr;
+  }
+
+  function drawTable(highlight) {
+    const col = colors();
+    const cols = 32, rows = 16, s = 16;
+    tcan.width = cols * s; tcan.height = rows * s;
+    for (let n = 0; n < 512; n++) {
+      const x = (n % cols) * s, y = Math.floor(n / cols) * s;
+      tctx.fillStyle = `rgb(${(puzzle.alg[n] ? col.lit : col.dark).join(",")})`;
+      tctx.fillRect(x + 1, y + 1, s - 2, s - 2);
+    }
+    const ring = (n, color, w) => {
+      tctx.strokeStyle = color; tctx.lineWidth = w;
+      tctx.strokeRect((n % cols) * s + 1, Math.floor(n / cols) * s + 1, s - 2, s - 2);
+    };
+    ring(0, col.edge, 2); ring(511, col.edge, 2);
+    if (highlight != null) ring(highlight, col.probe, 3);
+  }
+
+  function inspect() {
+    const p = hover || pinned;
+    const img = frames[step];
+    const rr = p.r + step, cc = p.c + step;
+    const bits = [];
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) bits.push(get(img, rr + dr, cc + dc));
+    const n = windowIndex(img, rr, cc);
+    const out = puzzle.alg[n];
+    $("inspTitle").textContent = `Window at (${p.r}, ${p.c})${pinned && !hover ? " · pinned" : ""}`;
+    $("win3").innerHTML = bits.map((b, i) => `<div class="${b ? "on" : ""}${i === 4 ? " centre" : ""}">${b}</div>`).join("");
+    const codes = [0, 1, 2].map(i => bits.slice(3 * i, 3 * i + 3).join(""));
+    $("decode").innerHTML =
+      `<span>rows&nbsp;&nbsp;<b>${codes.join(" ")}</b></span>` +
+      `<span>n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= 0b${codes.join("")} = <b class="big">${n}</b></span>` +
+      `<span>table[${n}] = <b>${out ? "#" : "."}</b></span>` +
+      `<span>step ${step} → ${step + 1}: ${bits[4] ? "#" : "."} → <b>${out ? "#" : "."}</b></span>`;
+    const outside = !inGrid(step, p.r, p.c);
+    $("inspNote").textContent = outside
+      ? (n === 0 || n === 511
+          ? `This pixel is out in the infinite background, so its window is uniform (n = ${n}). Every outside pixel computes the same thing.`
+          : "This pixel is just outside the grid, but its window reaches into it. That is why the grid grows by one pixel per side each step.")
+      : "Press Step to see this pixel take the value table[n].";
+    drawTable(n);
+  }
+
+  function setStep(k) {
+    step = Math.max(0, Math.min(MAX, k));
+    const f = frames[step];
+    $("scrub").value = step;
+    $("rStep").textContent = step;
+    $("rLit").textContent = f.bg ? "∞" : litCount(f).toLocaleString();
+    $("rGrid").textContent = `${f.w}×${f.h}`;
+    const bg = $("rBg");
+    bg.textContent = f.bg ? "lit" : "dark"; bg.className = `chip ${f.bg ? "lit" : "dark"}`;
+    const a = $("answer");
+    if (step === 2) a.innerHTML = `<strong>Part 1</strong> asks for this count${isExample ? " (the statement's answer is 35)" : ""}.`;
+    else if (step === MAX) a.innerHTML = `<strong>Part 2</strong> asks for this count${isExample ? " (the statement's answer is 3351)" : ""}.`;
+    else if (f.bg) a.textContent = "The outside is lit, so infinitely many pixels are on. It goes dark again on the next step.";
+    else a.textContent = "";
+    $("back").disabled = $("reset").disabled = step === 0;
+    $("step").disabled = step === MAX;
+    const a0 = puzzle.alg[0] ? "#" : ".", a511 = puzzle.alg[511] ? "#" : ".";
+    $("bgRule").textContent = puzzle.alg[0]
+      ? `here entry 0 is ${a0} and entry 511 is ${a511}, so a dark outside turns lit and a lit outside turns dark. It flips every step.`
+      : `here entry 0 is ${a0}, so a dark outside stays dark forever.`;
+    draw(); inspect();
+  }
+
+  function stop() { clearInterval(timer); timer = null; $("play").setAttribute("aria-pressed", "false"); $("play").textContent = "Play"; }
+  function play() {
+    if (timer) return stop();
+    if (step === MAX) setStep(0);
+    $("play").setAttribute("aria-pressed", "true"); $("play").textContent = "Pause";
+    timer = setInterval(() => { if (step >= MAX) stop(); else setStep(step + 1); }, 220);
+  }
+
+  // ---- events ----------------------------------------------------------
+  $("step").onclick = () => { stop(); setStep(step + 1); };
+  $("back").onclick = () => { stop(); setStep(step - 1); };
+  $("reset").onclick = () => { stop(); setStep(0); };
+  $("to2").onclick = () => { stop(); setStep(2); };
+  $("to50").onclick = () => { stop(); setStep(MAX); };
+  $("play").onclick = play;
+  $("scrub").oninput = e => { stop(); setStep(+e.target.value); };
+  document.addEventListener("keydown", e => {
+    if (e.target.closest("textarea, input")) return;
+    if (e.key === "ArrowRight") { stop(); setStep(step + 1); e.preventDefault(); }
+    else if (e.key === "ArrowLeft") { stop(); setStep(step - 1); e.preventDefault(); }
+    else if (e.key === " ") { play(); e.preventDefault(); }
+  });
+
+  const cellAt = e => {
+    const rect = view.getBoundingClientRect();
+    const cell = rect.width / Math.max(viewDims().vh, viewDims().vw);
+    const c = Math.floor((e.clientX - rect.left) / cell) - M, r = Math.floor((e.clientY - rect.top) / cell) - M;
+    const { h, w } = puzzle.image;
+    if (r < -M || c < -M || r >= h + M || c >= w + M) return null;
+    return { r, c };
+  };
+  view.addEventListener("mousemove", e => { const p = cellAt(e); if (p && (!hover || p.r !== hover.r || p.c !== hover.c)) { hover = p; draw(); inspect(); } });
+  view.addEventListener("mouseleave", () => { hover = null; draw(); inspect(); });
+  view.addEventListener("click", e => { const p = cellAt(e); if (p) { pinned = p; hover = null; draw(); inspect(); } });
+
+  const status = (msg, err) => { $("status").textContent = msg; $("status").className = `status${err ? " err" : ""}`; };
+  function setSource(mine) {
+    $("srcEx").setAttribute("aria-pressed", String(!mine));
+    $("srcMine").setAttribute("aria-pressed", String(mine));
+    $("mineBox").hidden = !mine;
+    if (!mine) { stop(); load(EXAMPLE, true); status("Showing the statement's example. Its answers are 35 at step 2 and 3351 at step 50."); }
+    else status("Paste your input or open the file, then load it.");
+  }
+  $("srcEx").onclick = () => setSource(false);
+  $("srcMine").onclick = () => setSource(true);
+  function tryLoad(text) {
+    try {
+      stop(); load(text, false);
+      const { h, w } = puzzle.image;
+      status(`Loaded a ${w}×${h} image. The table's entry 0 is ${puzzle.alg[0] ? "#" : "."}.`);
+    } catch (err) { status(err.message, true); }
+  }
+  $("load").onclick = () => tryLoad($("paste").value);
+  $("pick").onclick = () => $("file").click();
+  $("file").onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { $("paste").value = r.result; tryLoad(r.result); };
+    r.readAsText(f);
+  };
+  $("paste").addEventListener("paste", () => setTimeout(() => { if ($("paste").value.trim()) tryLoad($("paste").value); }, 0));
+
+  const redraw = () => { if (puzzle) { draw(); inspect(); } };
+  window.addEventListener("resize", redraw);
+  matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", redraw);
+  new MutationObserver(redraw).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  load(EXAMPLE, true);
+})();
+</script>

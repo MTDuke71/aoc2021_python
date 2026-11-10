@@ -10,6 +10,8 @@ Thumbs.db
 
 # Raw problem-statement downloads (intermediate; converted to dayNN.md)
 /Problem_Statements/days/*.html
+# ...but hand-written viewers are source (they embed only the statement example)
+!/Problem_Statements/days/*_stepper.html
 
 # Renderings of the puzzle input (same redistribution concern)
 /Problem_Statements/days/*.png
