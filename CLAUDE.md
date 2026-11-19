@@ -54,6 +54,9 @@ python -m venv .venv
 .venv\Scripts\python.exe bench.py
 ```
 
+Optional: `.venv\Scripts\python.exe -m pip install openpyxl` for
+`scripts\day24_debugger_xlsx.py` (the day 24 Excel debugger).
+
 Inputs downloaded on Windows can carry CRLF, so parsing must tolerate a
 trailing `\r`. A per-line `.strip()` or `.splitlines()` handles it --
 `block.split("\n")` does not, and that caused a real bug in the 2020 repo

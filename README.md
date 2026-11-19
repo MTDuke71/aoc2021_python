@@ -17,7 +17,7 @@ Python era, laid out here without a legacy tree to fence off.
 | `bench.py` | per-phase timings, best and median of N runs |
 | `Problem_Statements/days/` | puzzle text, function guides, and `summary_2021.md` |
 | `inputs/dayNN.txt` | puzzle inputs (gitignored — AoC asks they not be redistributed) |
-| `scripts/` | PowerShell helpers that download statements and inputs and convert the HTML to Markdown |
+| `scripts/` | PowerShell helpers that download statements and inputs and convert the HTML to Markdown; `day24_debugger_xlsx.py` builds an Excel ALU debugger for day 24 into `inputs/` (needs openpyxl) |
 
 Days 01–25 start as stubs whose `part1` / `part2` raise `NotImplementedError`.
 The tests and the bench both key on that, so an unsolved day shows up as a
