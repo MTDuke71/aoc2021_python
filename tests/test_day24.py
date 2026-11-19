@@ -213,6 +213,47 @@ def test_nesting_pairs_like_parentheses():
     assert day24.pair_blocks(blocks) == [Pair(1, 2, 1), Pair(0, 3, -2)]
 
 
+# --- guide section 8: William Y. Feng's push-digit search ------------------
+# https://www.youtube.com/watch?v=Eswmo7Y7C4U -- only push digits are free,
+# pop digits are forced, the first survivor in order is the answer.
+
+
+def push_digit_search(blocks: list[Block], *, largest: bool) -> int | None:
+    order = range(9, 0, -1) if largest else range(1, 10)
+    n_push = sum(b.div == 1 for b in blocks)
+    for free in itertools.product(order, repeat=n_push):
+        z, k, digits = 0, 0, []
+        for b in blocks:
+            if b.div == 1:
+                w = free[k]
+                k += 1
+                z = z * 26 + w + b.offset
+            else:
+                w = z % 26 + b.check
+                z //= 26
+                if not 1 <= w <= 9:
+                    break
+            digits.append(w)
+        else:
+            return int("".join(map(str, digits)))
+    return None
+
+
+@pytest.mark.parametrize("seed", range(12))
+def test_push_digit_search_matches_brute_force(seed):
+    blocks = random_blocks(random.Random(seed), 2)
+    valid = brute_force(make_program(blocks), 4)
+    assert push_digit_search(blocks, largest=True) == (valid[-1] if valid else None)
+    assert push_digit_search(blocks, largest=False) == (valid[0] if valid else None)
+
+
+def test_push_digit_search_agrees_on_real_input(real_input):  # ~2 s: walks 2.6M candidates for the max
+    blocks = day24.read_blocks(day24.parse_program(real_input(24)))
+    pairs = day24.pair_blocks(blocks)
+    assert push_digit_search(blocks, largest=True) == day24.model_number(pairs, largest=True)
+    assert push_digit_search(blocks, largest=False) == day24.model_number(pairs, largest=False)
+
+
 # --- CP-SAT on the literal instruction list (independent of the block analysis)
 
 

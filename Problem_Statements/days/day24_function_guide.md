@@ -338,7 +338,82 @@ rules but can't see the structure. It's the integer-programming
 counterpart of handing a netlist to a SAT-based equivalence checker
 instead of reasoning about the gates.
 
-## 8. Possible optimization
+## 8. Sidebar: the middle road — search only the push digits
+
+William Y. Feng's solution ([video walkthrough](https://www.youtube.com/watch?v=Eswmo7Y7C4U))
+sits between brute force and the closed form. It uses the stack
+insight but not the pairing. He calls the two block kinds **Type 1**
+and **Type 2**:
+
+| Feng | here | role |
+|---|---|---|
+| Type 1, `steps[i]` | push (`div z 1`), `offset` | push `w + steps[i]` |
+| Type 2, `required[i]` | pop (`div z 26`), `−check` | digit is *forced* to `top − required[i]` |
+
+Only the 7 push digits are free. Loop over them, largest first; each
+pop's digit is then whatever makes it match (the debugger sheet's "w
+that would match" row). A candidate is rejected the moment a forced
+digit falls outside 1..9:
+
+```python
+for free in product(range(9, 0, -1), repeat=7):       # 9^7 = 4,782,969 at most
+    z, k, digits = 0, 0, []
+    for b in blocks:
+        if b.div == 1:                                  # Type 1: push
+            w = free[k]; k += 1
+            z = z * 26 + w + b.offset
+        else:                                           # Type 2: pop, digit forced
+            w = z % 26 + b.check
+            z //= 26
+            if not 1 <= w <= 9:
+                break
+        digits.append(w)
+    else:
+        return digits                                   # first survivor is the max
+```
+
+There is no `z == 0` test at the end. Every pop takes the matching
+branch by construction, and section 4 shows that is the only way to
+reach 0.
+
+**Why the first hit is the maximum.** Push digits are tried in
+descending lexicographic order. Each forced pop digit depends only on
+its paired push digit (the pairing from section 2, used implicitly).
+So the first survivor has the largest possible push digits at every
+position, and its forced digits are then determined. For part 2, count
+upward instead.
+
+Measured on this input:
+
+| | first hit | candidates tried | time |
+|---|---|--:|--:|
+| largest | 51939397989999 | 2,602,531 of 4,782,969 | 1.9 s |
+| smallest | 11717131211195 | 39,538 | 27 ms |
+
+The asymmetry comes from the answers themselves. The largest starts
+with 5, so every candidate beginning 9, 8, 7, or 6 is walked first. The
+smallest starts with 1, so it is found almost at once.
+
+**Compared with the other two approaches:**
+
+- **vs the shipped closed form:** the same core insight. The closed
+  form goes one step further, sees that the pairs are independent, and
+  sets each pair directly: 0.003 ms against 1.9 s.
+- **vs CP-SAT:** both are search, but Feng's search knows the
+  structure and CP-SAT doesn't. CP-SAT is faster here (15 ms for
+  either part) because propagation prunes the way the explicit loop
+  can't.
+- **As a stepping stone:** if you have spotted "pops are forced" but
+  not "pops pair with pushes", this is the program you write, and it
+  is fast enough.
+
+Feng's posted code takes the two arrays as hand-copied constants
+(its docstring says so) and assumes the template without checking it.
+The version in the tests (`push_digit_search`) reads them from
+`read_blocks`, and is pinned against `model_number` on the real input
+and on the brute-forced synthetic MONADs.
+
+## 9. Possible optimization
 
 None worth having. The 0.1 ms is parse-dominated. A generic
 alternative that doesn't depend on the template is a depth-first
